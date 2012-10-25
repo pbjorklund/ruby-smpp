@@ -241,6 +241,26 @@ module Smpp
           logger.warn "Unexpected BindReceiverResponse. Command status: #{pdu.command_status}"
           close_connection
         end
+      when Pdu::BindTransmitterResponse
+        case pdu.command_status
+        when Pdu::Base::ESME_ROK
+          logger.debug "Bound OK."
+          @state = :bound
+          if @delegate.respond_to?(:bound)
+            @delegate.bound(self)
+          end
+        when Pdu::Base::ESME_RINVPASWD
+          logger.warn "Invalid password."
+          # schedule the connection to close, which eventually will cause the unbound() delegate
+          # method to be invoked.
+          close_connection
+        when Pdu::Base::ESME_RINVSYSID
+          logger.warn "Invalid system id."
+          close_connection
+        else
+          logger.warn "Unexpected BindReceiverResponse. Command status: #{pdu.command_status}"
+          close_connection
+        end
       else
         logger.warn "(#{self.class.name}) Received unexpected PDU: #{pdu.to_human}."
         close_connection
