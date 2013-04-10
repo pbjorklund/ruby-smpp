@@ -24,6 +24,8 @@ class Smpp::Transceiver < Smpp::Base
       # keep the message ID so we can associate the SMSC message ID with our message
       # when the response arrives.
       @ack_ids[pdu.sequence_number] = message_id
+
+      @delegate.message_sent(self, pdu, message_id) if @delegate.respond_to?(:message_sent)
     else
       raise InvalidStateException, "Transceiver is unbound. Cannot send MT messages."
     end
@@ -53,8 +55,6 @@ class Smpp::Transceiver < Smpp::Base
 
         #TODO Figure out why this needs to be an int here, it's a string elsewhere
         # so, we can use object_id because it`s always integer
-        require 'pry'
-        binding.pry
         udh << sprintf("%c", message_id.object_id & 0xFF)  # The ID for the entire concatenated message
 
         udh << sprintf("%c", parts.size)  # How many parts this message consists of
@@ -69,6 +69,7 @@ class Smpp::Transceiver < Smpp::Base
         # This is definately a bit hacky - multiple PDUs are being associated with a single
         # message_id.
         @ack_ids[pdu.sequence_number] = message_id
+        @delegate.message_sent(self, pdu, message_id) if @delegate.respond_to?(:message_sent)
       end
     else
       raise InvalidStateException, "Transceiver is unbound. Connot send MT messages."
